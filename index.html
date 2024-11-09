@@ -3,40 +3,53 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AJAX</title>
+  <title>AJAX with Modal</title>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <style>
-    /*폼*/
-    #studentForm {
-      background-color: beige;
-      padding: 20px;
-      width: 300px;
-      margin-bottom: 20px;
+    /* 모달 스타일 */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: black;
+      justify-content: center;
+      align-items: center;
     }
 
+    .modal-content {
+      background-color: beige;
+      padding: 20px;
+      border-radius: 8px;
+      width: 300px;
+    }
+
+    /* 기존 폼 스타일 */
     input[type="number"],
     input[type="text"] {
       padding: 8px 10px;
       margin-top: 4px;
       margin-bottom: 12px;
-      border: none;
     }
 
-    /* 버튼*/
+    /* 버튼 스타일 */
     button {
-      background-color: #4CAF50;
+      background-color: green;
       color: white;
       padding: 10px 15px;
-      margin: 5px 0;
       border: none;
+      margin: 5px;
     }
-    /* 학생 목록*/
+
+    /* 학생 목록 스타일 */
     #studentList {
-      width: 320px;
+      width: 700px;
       margin-top: 10px;
       padding: 15px;
-      background-color: #fff;
-      border-radius: 8px;
+      background-color: beige;
+      border: green;
     }
 
     #studentList div {
@@ -47,47 +60,70 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      width: 700px;
-    }
-
-    /* 삭제*/
-    #studentList button {
-      background-color: red;
-      padding: 5px 10px;
-      border-radius: 3px;
-      font-size: 12px;
     }
   </style>
 </head>
 <body>
-  <h1>학생 추가 및 수정</h1>
+  <h1>학생 관리</h1>
 
-  <form id="studentForm" onsubmit="createDataToJSONFile(); return false;">
-    <label for="student_id">ID:</label><br>
-    <input type="number" id="student_id" required><br>
+  <!-- 모달 오버레이와 폼 컨텐츠 -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal-content">
+      <form id="studentForm" onsubmit="submitData(); return false;">
+        <label for="student_id">ID:</label><br>
+        <input type="number" id="student_id" required><br>
 
-    <label for="student_name">Name:</label><br>
-    <input type="text" id="student_name" required><br>
+        <label for="student_name">Name:</label><br>
+        <input type="text" id="student_name" required><br>
 
-    <label for="student_age">Age:</label><br>
-    <input type="number" id="student_age" required><br>
+        <label for="student_age">Age:</label><br>
+        <input type="number" id="student_age" required><br>
 
-    <label for="student_phone">Phone:</label><br>
-    <input type="number" id="student_phone" required><br>
+        <label for="student_phone">Phone:</label><br>
+        <input type="number" id="student_phone" required><br>
 
-    <button type="submit">Add Student</button>
-  </form>
+        <button type="submit" id="modalSubmitButton">Add Student</button>
+        <button type="button" onclick="closeModal()">Cancel</button>
+      </form>
+    </div>
+  </div>
 
-  <button onclick="updateDataToJSONFile()">Update Student</button>
+  <button onclick="openModal('add')">Add Student</button>
 
   <h2>학생 목록</h2>
   <div id="studentList"></div>
 
   <script>
-    // 학생 데이터를 추가하는 함수
+    let isUpdateMode = false;
+
+    function openModal(mode, student = {}) {
+      document.getElementById("modal").style.display = "flex";
+      isUpdateMode = (mode === 'update');
+      document.getElementById("modalSubmitButton").textContent = isUpdateMode ? "Update Student" : "Add Student";
+      
+      // 폼 필드 초기화 또는 데이터 채우기
+      $("#student_id").val(student.id || "").prop("disabled", isUpdateMode);
+      $("#student_name").val(student.name || "");
+      $("#student_age").val(student.age || "");
+      $("#student_phone").val(student.phoneNumber || "");
+    }
+
+    function closeModal() {
+      document.getElementById("modal").style.display = "none";
+    }
+
+    function submitData() {
+      if (isUpdateMode) {
+        updateDataToJSONFile();
+      } else {
+        createDataToJSONFile();
+      }
+      closeModal();
+    }
+
     function createDataToJSONFile() {
       const xhr = new XMLHttpRequest();
-      xhr.open("POST", "http://localhost:3000/students");
+      xhr.open("POST", "https://6729f62b6d5fa4901b6f276b.mockapi.io/api/v1/students/");
       xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
 
       let data = {
@@ -109,13 +145,10 @@
       };
     }
 
-    // 특정 id의 학생 데이터를 업데이트하는 함수
     function updateDataToJSONFile() {
       let id = $("#student_id").val();
-      alert("수정할 ID: " + id);
-      
       const xhr = new XMLHttpRequest();
-      xhr.open("PUT", "http://localhost:3000/students/" + id);
+      xhr.open("PUT", `https://6729f62b6d5fa4901b6f276b.mockapi.io/api/v1/students/${id}`);
       xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
 
       let data = {
@@ -127,20 +160,18 @@
       xhr.send(JSON.stringify(data));
 
       xhr.onload = () => {
-        alert("응답 코드: " + xhr.status);
         if (xhr.status === 200) {
           alert("수정 성공!");
-          getDataFromJSONFile(); // 업데이트 후 데이터를 다시 불러오는 함수 호출
+          getDataFromJSONFile();
         } else {
           alert("수정 실패! 오류 코드: " + xhr.status);
         }
       };
     }
 
-    // 학생 데이터를 불러와 화면에 표시하는 함수
     function getDataFromJSONFile() {
       const xhr = new XMLHttpRequest();
-      xhr.open("GET", "http://localhost:3000/students");
+      xhr.open("GET", "https://6729f62b6d5fa4901b6f276b.mockapi.io/api/v1/students");
       xhr.onload = () => {
         if (xhr.status === 200) {
           const data = JSON.parse(xhr.responseText);
@@ -152,21 +183,23 @@
       xhr.send();
     }
 
-    // 학생 목록을 화면에 표시하는 함수
     function displayStudents(students) {
       const studentList = document.getElementById("studentList");
-      studentList.innerHTML = ""; // 기존 목록 초기화
+      studentList.innerHTML = ""; 
 
       students.forEach(student => {
         const studentItem = document.createElement("div");
         studentItem.textContent = `학번: ${student.id} / 이름: ${student.name} / 나이: ${student.age} / 번호: ${student.phoneNumber}`;
 
-        // 삭제 버튼 생성
+        const editButton = document.createElement("button");
+        editButton.textContent = "Edit";
+        editButton.onclick = () => openModal('update', student);
+
         const deleteButton = document.createElement("button");
         deleteButton.textContent = "Delete";
         deleteButton.onclick = () => deleteDataFromJSONFile(student.id);
 
-        // 학생 항목에 삭제 버튼 추가
+        studentItem.appendChild(editButton);
         studentItem.appendChild(deleteButton);
         studentList.appendChild(studentItem);
       });
@@ -174,11 +207,11 @@
 
     function deleteDataFromJSONFile(studentId) {
       const xhr = new XMLHttpRequest();
-      xhr.open("DELETE", `http://localhost:3000/students/${studentId}`);
+      xhr.open("DELETE", `https://6729f62b6d5fa4901b6f276b.mockapi.io/api/v1/students/${studentId}`);
       xhr.onload = () => {
         if (xhr.status === 200 || xhr.status === 204) {
           alert("삭제 성공!");
-          getDataFromJSONFile(); // 삭제 후 데이터를 다시 불러오는 함수 호출
+          getDataFromJSONFile();
         } else {
           alert("삭제 실패! 오류 코드: " + xhr.status);
         }
@@ -186,7 +219,6 @@
       xhr.send();
     }
 
-    // 페이지가 로드되면 기존 데이터를 불러옴
     window.onload = function () {
       getDataFromJSONFile();
     };
